@@ -4,7 +4,7 @@ MANAGE := $(PYTHON) manage.py
 IMAGE := smartseason-backend
 CONTAINER := smartseason-backend
 
-.PHONY: help install migrate makemigrations createsuperuser shell run test check docker-build docker-run docker-stop
+.PHONY: help install migrate makemigrations migrations createsuperuser shell run test check seed seed-clear docker-build docker-run docker-stop
 
 help:
 	@echo Available targets:
@@ -16,6 +16,8 @@ help:
 	@echo   make run             - Run development server on port 8000
 	@echo   make test            - Run Django tests
 	@echo   make check           - Run Django system checks
+	@echo   make seed            - Seed demo data
+	@echo   make seed-clear      - Clear fields/updates and reseed demo data
 	@echo   make docker-build    - Build Docker image
 	@echo   make docker-run      - Run app container with .env and port 8000
 	@echo   make docker-stop     - Stop and remove running app container
@@ -28,6 +30,8 @@ migrate:
 
 makemigrations:
 	$(MANAGE) makemigrations
+
+migrations: makemigrations
 
 createsuperuser:
 	$(MANAGE) createsuperuser
@@ -43,6 +47,12 @@ test:
 
 check:
 	$(MANAGE) check
+
+seed:
+	$(MANAGE) seed_data
+
+seed-clear:
+	$(MANAGE) seed_data --clear
 
 docker-build:
 	docker build -t $(IMAGE) .

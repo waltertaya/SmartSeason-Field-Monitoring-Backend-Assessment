@@ -64,3 +64,39 @@ class FieldUpdateListCreateView(generics.ListCreateAPIView):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You are not assigned to this field.")
         serializer.save(field=field)
+
+
+class DashboardView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        if user.is_admin:
+            fields = Field.objects.prefetch_related('updates').all()
+        else:
+            fields = Field.objects.prefetch_related('updates').filter(assigned_agent=user)
+
+        total = fields.count()
+        stage_breakdown = dict(
+            fields.values_list('stage').annotate(count=Count('id'))
+        )
+
+        # Compute status for each field (in Python to reuse property logic)
+        status_breakdown = {'active': 0, 'at_risk': 0, 'completed': 0}
+        for f in fields:
+            status_breakdown[f.computed_status] += 1
+
+        data = {
+            'total_fields': total,
+            'stage_breakdown': stage_breakdown,
+            'status_breakdown': status_breakdown,
+        }
+
+        if user.is_admin:
+            data['recent_updates'] = FieldUpdateSerializer(
+                FieldUpdate.objects.select_related('agent', 'field').order_by('-created_at')[:10],
+                many=True,
+            ).data
+
+        return Response(data)
